@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Timesync configuration page</title>
+    <style>
+        .status-unknown {
+            color: gray;
+        }
+
+        .status-enabled {
+            color: green;
+        }
+
+        .status-disabled {
+            color: red;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+    </style>
+</head>
+<body>
+    <h1>Time synchronization</h1>
+    <p>You are accessing from {{ ip }}</p>
+    <p>NTP server on your IP is: <span id="ntp-server-status" class="status-unknown">unknown</span></p>
+
+    <p id="autoconfig" class="hidden">Set up time synchronization:
+        <a onclick="setupTimeSync()">with this computer</a><span class="hidden" id="autoconf-status"></span>
+    </p>
+
+    <script>
+        let serverStatus = document.getElementById('ntp-server-status');
+        let autoconfig = document.getElementById('autoconfig');
+        let autoconfStatus = document.getElementById('autoconf-status');
+
+        let isConfRequestPending = false;
+
+        function setupTimeSync()
+        {
+            if (isConfRequestPending) return;
+            let xhttp = new XMLHttpRequest();
+            xhttp.onreadystatechange = function() {
+                if (this.readyState === XMLHttpRequest.DONE) {
+                    isConfRequestPending = false;
+                    if (this.status === 200) {
+                        autoconfStatus.innerText = 'Success';
+                        autoconfStatus.className = 'status-enabled';
+                    } else {
+                        autoconfStatus.innerText = 'Failed';
+                        autoconfStatus.className = 'status-disabled';
+                    }
+                }
+            };
+            xhttp.open('GET', '/set_timesync_config');
+            xhttp.send();
+            isConfRequestPending = true;
+        }
+
+        (function() {
+            let xhttp = new XMLHttpRequest();
+            xhttp.onreadystatechange = function() {
+                if (this.readyState === XMLHttpRequest.DONE)
+                {
+                    if (this.status === 200)
+                    {
+                        serverStatus.innerText = 'running';
+                        serverStatus.className = 'status-enabled';
+                        autoconfig.className = '';
+                    }
+                    else
+                    {
+                        serverStatus.innerText = 'disabled';
+                        serverStatus.className = 'status-disabled';
+                    }
+                }
+            };
+            xhttp.open('GET', '/try_time_sync');
+            xhttp.send();
+        })()
+    </script>
+</body>
+</html>
